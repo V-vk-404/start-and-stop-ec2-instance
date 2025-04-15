@@ -1,0 +1,33 @@
+
+ <!-- lambda function which is running perfect  -->
+
+import boto3
+import json
+
+def lambda_handler(event, context):
+    ec2 = boto3.client('ec2')
+
+    try:
+        # Check if coming from API Gateway or direct Lambda console test
+        if 'body' in event:
+            body = json.loads(event['body'])  # API Gateway
+        else:
+            body = event  # direct test event
+
+        instance_id = body.get("instance_id")
+        
+        if not instance_id:
+            raise ValueError("Missing 'instance_id' in request body")
+
+        response = ec2.start_instances(InstanceIds=[instance_id])
+
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'message': f'Instance {instance_id} is starting.'})
+        }
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'message': str(e)})
+        }
