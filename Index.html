@@ -42,7 +42,6 @@
     }
 
     .custom-select select {
-      display: inline-block;
       width: 100%;
       padding: 12px;
       font-size: 1rem;
@@ -61,21 +60,38 @@
       box-shadow: 0 0 5px rgba(123, 31, 162, 0.5);
     }
 
-    button {
-      width: 100%;
-      margin-top: 15px;
-      padding: 12px;
-      font-size: 1rem;
-      background-color: #7b1fa2;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-      cursor: pointer;
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
     }
 
-    button:hover {
-      background-color: #4a148c;
+    .btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-start {
+      background-color: #43a047;
+    }
+
+    .btn-start:hover {
+      background-color: #2e7d32;
+      transform: scale(1.05);
+    }
+
+    .btn-stop {
+      background-color: #e53935;
+    }
+
+    .btn-stop:hover {
+      background-color: #b71c1c;
       transform: scale(1.05);
     }
 
@@ -127,22 +143,33 @@
 </head>
 <body>
   <div class="card">
-    <h2>🚀 Control Your EC2 Instance</h2>
+    <h2>⚙️ Manage Your EC2 Instance</h2>
+
     <div class="custom-select">
       <select id="instanceList">
-        <option value="i-02bd0ef7dde9fa613">Web Server - i-02bd0ef7dde9fa613</option>
-        <option value="i-0ffc8f8458a7450cd">Database Server - i-0ffc8f8458a7450cd</option>
+        <option value="i-057aa7110a0794bd6">Web Server - i-057aa7110a0794bd6</option>
+        <option value="i-0b5bf7cd5ff89700a">Database Server - i-0b5bf7cd5ff89700a</option>
       </select>
     </div>
 
-    <button onclick="handleStart()">Start Instance</button>
-    <button onclick="handleStop()">Stop Instance</button>
+    <div class="button-group">
+      <button class="btn btn-start" onclick="handleInstance('start')">Start</button>
+      <button class="btn btn-stop" onclick="handleInstance('stop')">Stop</button>
+    </div>
+
     <p id="status"></p>
   </div>
-<script>
-    async function manageInstance(instanceId, action) {
+
+  <script>
+    function handleInstance(action) {
+      const instanceId = document.getElementById('instanceList').value;
+      controlInstance(instanceId, action);
+    }
+
+    async function controlInstance(instanceId, action) {
       const statusEl = document.getElementById("status");
-      statusEl.innerText = `${action === 'start' ? 'Starting' : 'Stopping'} EC2 instance ${instanceId}...`;
+      const actionText = action === "start" ? "Starting" : "Stopping";
+      statusEl.innerHTML = `⏳ ${actionText} EC2 instance <strong>${instanceId}</strong> <span class='spinner'></span>`;
 
       try {
         const response = await fetch('https://crpsb16zn6.execute-api.us-east-2.amazonaws.com/prod/start-ec2', {
@@ -157,7 +184,7 @@
         statusEl.innerText = data.message || `✅ Instance ${action}ed!`;
       } catch (error) {
         statusEl.innerText = "❌ Error: " + error.message;
-        console.error(`Error during ${action}:`, error);
+        console.error("Error controlling instance:", error);
       }
     }
   </script>
