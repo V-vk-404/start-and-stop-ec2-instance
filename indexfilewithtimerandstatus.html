@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EC2 Instance Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin-top: 30px;
+      padding: 40px 0 0 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f2fefb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h2 {
+      margin-top: 20px;
+      font-size: 2rem;
+      color: #333;
+    }
+
+    #timer {
+      font-size: 1.2rem;
+      color: purple;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+
+    .logo {
+      margin-top: 20px;
+    }
+
+    .logo img {
+      height: 60px;
+    }
+
+    .instance-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 30px;
+      gap: 20px;
+    }
+
+    .card {
+      background-color: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      width: 360px;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: perspective(1000px) rotateY(3deg) rotateX(3deg);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .card h3 {
+      font-size: 1.2rem;
+      color: #00695c;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      border: none;
+      border-radius: 30px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .btn-start {
+      background-color: #388e3c;
+    }
+
+    .btn-stop {
+      background-color: #d32f2f;
+    }
+
+    .btn-status {
+      background-color: #800080;
+    }
+
+    #status {
+      margin-top: 30px;
+      font-weight: bold;
+      color: #444;
+    }
+
+    .toast {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, top 0.3s ease;
+      z-index: 9999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      top: 40px;
+      pointer-events: auto;
+    }
+
+    .toast.success { background-color: #2e7d32; }
+    .toast.error { background-color: #c62828; }
+    .toast.info { background-color: purple; }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  <div class="logo">
+    <img src="https://server-start.golfdistrict.in/logo.png" alt="Golf District Logo">
+  </div>
+  <h2>EC2 Instance Manager</h2>
+  <div class="instance-container">
+    <div class="card">
+      <h3>Manish_panday</h3>
+      <button class="btn btn-start" onclick="controlInstance('i-0a153d8d95205da76', 'start')">🚀 Start</button>
+      <button class="btn btn-stop" onclick="controlInstance('i-0a153d8d95205da76', 'stop')">🛑 Stop</button>
+      <button class="btn btn-status" onclick="checkInstanceStatus('i-0a153d8d95205da76')">ℹ️ Status</button>
+    </div>
+    <div class="card">
+      <h3>Prodp</h3>
+      <button class="btn btn-start" onclick="controlInstance('i-0a153d8d95205da76', 'start')">🚀 Start</button>
+      <button class="btn btn-stop" onclick="controlInstance('i-0a153d8d95205da76', 'stop')">🛑 Stop</button>
+      <button class="btn btn-status" onclick="checkInstanceStatus('i-0a153d8d95205da76')">ℹ️ Status</button>
+    </div>
+    <div class="card">
+      <h3>Sandboxp</h3>
+      <button class="btn btn-start" onclick="controlInstance('i-0abc123fakeid1234', 'start')">🚀 Start</button>
+      <button class="btn btn-stop" onclick="controlInstance('i-0abc123fakeid1234', 'stop')">🛑 Stop</button>
+      <button class="btn btn-status" onclick="checkInstanceStatus('i-0abc123fakeid1234')">ℹ️ Status</button>
+    </div>
+  </div>
+
+  <div id="timer">⏳ Time left to stop EC2 Instance: calculating...</div>
+  <div id="status"></div>
+
+  <script>
+    function showToast(message, type = 'info', duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.className = `toast ${type} show`;
+      toast.innerText = message;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    async function checkInstanceStatus(instanceId) {
+      showToast(`⏳ Checking status for ${instanceId}...`, "info");
+      try {
+        const response = await fetch(`https://cpypieek38.execute-api.us-east-2.amazonaws.com/prod/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instance_id: instanceId, action: 'status' })
+        });
+
+        const data = await response.json();
+        if (data.State) {
+          const emoji =
+            data.State === 'running' ? '🟢' :
+            data.State === 'stopped' ? '🔴' : '⚪';
+          showToast(`${emoji} Instance ${instanceId} is ${data.State.toUpperCase()}`, "success");
+        } else {
+          showToast(`⚠️ Unknown response.`, "info");
+        }
+      } catch (err) {
+        showToast(`❌ Error: ${err.message}`, "error");
+      }
+    }
+
+    async function controlInstance(instanceId, action) {
+      try {
+        await fetch('https://cpypieek38.execute-api.us-east-2.amazonaws.com/prod/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instance_id: instanceId, action: action })
+        });
+
+        if (action === 'start') {
+          showToast(`✅ Instance ${instanceId} started`, 'success');
+        } else {
+          showToast(`🛑 Instance ${instanceId} stopped`, 'error');
+        }
+      } catch (error) {
+        showToast("❌ Error: " + error.message, 'error');
+        console.error("Error:", error);
+      }
+    }
+
+    const timerDisplay = document.getElementById('timer');
+    const startTimeUTC = new Date('May 4, 2025 16:40:00 UTC');
+    const intervalHours = 2;
+    const intervalMs = intervalHours * 60 * 60 * 1000;
+    const warningTimeBeforeStopMs = 5 * 60 * 1000;
+
+    let upcomingEvents = [];
+    let warnedEvents = new Set();
+    const now = new Date();
+
+    for (let i = 0; i < 12; i++) {
+      const eventTime = new Date(startTimeUTC.getTime() + i * intervalMs);
+      if (eventTime > now) {
+        upcomingEvents.push(eventTime);
+      }
+    }
+
+    function updateTimerDisplay() {
+      const now = new Date();
+      if (upcomingEvents.length === 0) return;
+      const nextEvent = upcomingEvents[0];
+      const diff = nextEvent.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        timerDisplay.textContent = '🔴 Stopping now...';
+        upcomingEvents.shift();
+        return;
+      }
+
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+
+      timerDisplay.textContent = `⏳ Time left to stop EC2 instances: ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    setInterval(() => {
+      updateTimerDisplay();
+
+      const currentTime = new Date();
+      if (upcomingEvents.length === 0) return;
+
+      upcomingEvents.forEach(eventTime => {
+        const diff = eventTime.getTime() - currentTime.getTime();
+
+        if (diff <= warningTimeBeforeStopMs && diff > warningTimeBeforeStopMs - 1000) {
+          if (!warnedEvents.has(eventTime.getTime())) {
+            showToast("⚠️ Only 5 minutes left before stopping EC2 instances", "info", 8000);
+            warnedEvents.add(eventTime.getTime());
+          }
+        }
+      });
+    }, 1000);
+  </script>
+</body>
+</html>
