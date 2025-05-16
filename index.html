@@ -212,59 +212,56 @@
       }
     }
 
-    const timerDisplay = document.getElementById('timer');
-    const startTimeUTC = new Date('May 4, 2025 16:40:00 UTC');
-    const intervalHours = 2;
-    const intervalMs = intervalHours * 60 * 60 * 1000;
-    const warningTimeBeforeStopMs = 5 * 60 * 1000;
+const timerDisplay = document.getElementById('timer');
+const startTimeUTC = new Date('May 13, 2025 15:6:00 UTC');
+const intervalHours = 2;
+const intervalMs = intervalHours * 60 * 60 * 1000;
+const warningTimeBeforeStopMs = 5 * 60 * 1000;
 
-    let upcomingEvents = [];
-    let warnedEvents = new Set();
-    const now = new Date();
+let lastWarnedEventTime = null;
 
-    for (let i = 0; i < 12; i++) {
-      const eventTime = new Date(startTimeUTC.getTime() + i * intervalMs);
-      if (eventTime > now) {
-        upcomingEvents.push(eventTime);
-      }
-    }
+function getNextEventTime() {
+  const now = new Date();
+  const elapsed = now.getTime() - startTimeUTC.getTime();
+  const intervalsPassed = Math.ceil(elapsed / intervalMs);
+  return new Date(startTimeUTC.getTime() + intervalsPassed * intervalMs);
+}
 
-    function updateTimerDisplay() {
-      const now = new Date();
-      if (upcomingEvents.length === 0) return;
-      const nextEvent = upcomingEvents[0];
-      const diff = nextEvent.getTime() - now.getTime();
+function updateTimerDisplay() {
+  const now = new Date();
+  const nextEvent = getNextEventTime();
+  const diff = nextEvent.getTime() - now.getTime();
 
-      if (diff <= 0) {
-        timerDisplay.textContent = '🔴 Stopping now...';
-        upcomingEvents.shift();
-        return;
-      }
+  if (diff <= 0) {
+    timerDisplay.textContent = '🔴 Stopping now...';
+    return;
+  }
 
-      const hours = Math.floor(diff / 3600000);
-      const minutes = Math.floor((diff % 3600000) / 60000);
-      const seconds = Math.floor((diff % 60000) / 1000);
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
 
-      timerDisplay.textContent = `⏳ Time left to stop EC2 instances: ${hours}h ${minutes}m ${seconds}s`;
-    }
+  timerDisplay.textContent = `⏳ Time left to stop EC2 instances: ${hours}h ${minutes}m ${seconds}s`;
+}
 
-    setInterval(() => {
-      updateTimerDisplay();
+// Update every second
+setInterval(() => {
+  updateTimerDisplay();
 
-      const currentTime = new Date();
-      if (upcomingEvents.length === 0) return;
+  const now = new Date();
+  const nextEvent = getNextEventTime();
+  const diff = nextEvent.getTime() - now.getTime();
 
-      upcomingEvents.forEach(eventTime => {
-        const diff = eventTime.getTime() - currentTime.getTime();
-
-        if (diff <= warningTimeBeforeStopMs && diff > warningTimeBeforeStopMs - 1000) {
-          if (!warnedEvents.has(eventTime.getTime())) {
-            showToast("⚠️ Only 5 minutes left before stopping EC2 instances", "info", 8000);
-            warnedEvents.add(eventTime.getTime());
-          }
-        }
-      });
-    }, 1000);
+  // Show warning exactly once when 5 minutes are left
+  if (
+    diff <= warningTimeBeforeStopMs &&
+    diff > warningTimeBeforeStopMs - 1000 &&
+    lastWarnedEventTime !== nextEvent.getTime()
+  ) {
+    showToast("⚠️ Only 5 minutes left before stopping EC2 instances", "info", 8000);
+    lastWarnedEventTime = nextEvent.getTime();
+  }
+}, 1000);
   </script>
 </body>
 </html>
